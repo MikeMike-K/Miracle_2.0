@@ -9,17 +9,78 @@ from apscheduler.schedulers.background import BackgroundScheduler
 
 app = Flask(__name__)
 app.secret_key = 'super_secret_key_change_me'
-DB_NAME = 'database.db'
+import os
+
+# Определяем, где запущен код: на Railway (PostgreSQL) или локально (SQLite)
+DATABASE_URL = os.environ.get('DATABASE_URL')
+
+if DATABASE_URL:
+    # Railway: используем PostgreSQL
+    import psycopg2
+    from psycopg2.extras import DictCursor
+
+    # psycopg2 использует другой формат подключения
+    DB_TYPE = 'postgresql'
+    DB_NAME = DATABASE_URL
+else:
+    # Локально: используем SQLite
+    DB_TYPE = 'sqlite'
+    DB_NAME = 'database.db'
+
+def get_db_connection():
+    """Умная функция подключения: PostgreSQL на Railway, SQLite локально"""
+    if DB_TYPE == 'postgresql':
+        conn = psycopg2.connect(DB_NAME)
+        # Эмулируем поведение sqlite3
+        class PGWrapper:
+            def __init__(self, conn):
+                self.conn = conn
+                self._cursor = conn.cursor()
+            def execute(self, query, params=()):
+                # Заменяем ? на %s для PostgreSQL
+                pg_query = query.replace('?', '%s')
+                self._cursor.execute(pg_query, params)
+                return self
+            def fetchone(self):
+                return self._cursor.fetchone()
+            def fetchall(self):
+                return self._cursor.fetchall()
+            @property
+            def lastrowid(self):
+                self._cursor.execute("SELECT lastval()")
+                return self._cursor.fetchone()[0]
+            def commit(self):
+                self.conn.commit()
+            def close(self):
+                self._cursor.close()
+                self.conn.close()
+            def __enter__(self):
+                return self
+            def __exit__(self, *args):
+                self.close()
+        return PGWrapper(conn)
+    else:
+        return get_db_connection()
 
 DEFAULT_ADMIN_LOGIN = 'admin'
 DEFAULT_ADMIN_PASSWORD = 'admin123'
 
+from apscheduler.schedulers.background import BackgroundScheduler
+import os
+
+# Запускаем планировщик ТОЛЬКО если это не WSGI-окружение PythonAnywhere
 scheduler = BackgroundScheduler(timezone='Europe/Moscow')
-scheduler.start()
+
+# На PythonAnywhere WSGI не запускаем планировщик при импорте
+if os.environ.get('RENDER') is None and 'pythonanywhere' not in os.environ.get('SERVER_SOFTWARE', '').lower():
+    try:
+        scheduler.start()
+    except Exception as e:
+        print(f"[SCHEDULER] Не удалось запустить: {e}")
 
 
 def init_db():
-    conn = sqlite3.connect(DB_NAME)
+    conn = get_db_connection()
     cursor = conn.cursor()
 
     cursor.execute('''CREATE TABLE IF NOT EXISTS users 
@@ -76,7 +137,7 @@ init_db()
 # ================= ФУНКЦИИ ОТПРАВКИ ОТЧЕТОВ =================
 def send_report_email(report_type='weekly'):
     print(f"\n{'=' * 60}\n[DEBUG] 🚀 ЗАПУСК ОТПРАВКИ: {report_type.upper()}\n{'=' * 60}")
-    conn = sqlite3.connect(DB_NAME)
+    conn = get_db_connection()
     cursor = conn.cursor()
 
     # 0. Получаем настройки получателей СРАЗУ
@@ -356,7 +417,7 @@ def send_report_email(report_type='weekly'):
 
 def send_daily_plan_email(test_mode=False):
     print(f"\n{'=' * 60}\n[DEBUG] 🚀 ЗАПУСК ОТПРАВКИ ЕЖЕДНЕВНОГО ПЛАНА (Тест: {test_mode})\n{'=' * 60}")
-    conn = sqlite3.connect(DB_NAME)
+    conn = get_db_connection()
     cursor = conn.cursor()
 
     # id=3 для ежедневных планов
@@ -458,7 +519,7 @@ def send_daily_plan_email(test_mode=False):
 
 def update_scheduler():
     scheduler.remove_all_jobs()
-    conn = sqlite3.connect(DB_NAME)
+    conn = get_db_connection()
     weekly = conn.cursor().execute(
         "SELECT recipient_ids, day_value, time_value FROM report_settings WHERE id = 1").fetchone()
     monthly = conn.cursor().execute(
@@ -509,7 +570,7 @@ def login():
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
-        conn = sqlite3.connect(DB_NAME)
+        conn = get_db_connection()
         user = conn.cursor().execute(
             "SELECT password, role, first_name, last_name, patronymic FROM users WHERE username = ?",
             (username,)).fetchone()
@@ -548,7 +609,7 @@ def admin():
         if 'new_password' in request.form:
             new_pass = request.form['new_password']
             if new_pass == request.form['confirm_password'] and len(new_pass) >= 4:
-                conn = sqlite3.connect(DB_NAME)
+                conn = get_db_connection()
                 conn.cursor().execute("UPDATE users SET password = ? WHERE username = ?",
                                       (generate_password_hash(new_pass), session['username']))
                 conn.commit();
@@ -565,7 +626,7 @@ def admin():
             if not first_name or not last_name or not email or not new_username or not new_password:
                 flash('Заполните все обязательные поля!', 'error')
             else:
-                conn = sqlite3.connect(DB_NAME)
+                conn = get_db_connection()
                 if conn.cursor().execute("SELECT id FROM users WHERE username = ?", (new_username,)).fetchone():
                     flash('Логин уже занят!', 'error')
                 else:
@@ -576,7 +637,7 @@ def admin():
                     conn.commit();
                     flash(f'Пользователь {first_name} {last_name} успешно создан!', 'success')
                 conn.close()
-    users_list = sqlite3.connect(DB_NAME).cursor().execute(
+    users_list = get_db_connection().cursor().execute(
         "SELECT id, username, role, first_name, last_name, email FROM users").fetchall()
     return render_template('admin.html', users_list=users_list)
 
@@ -584,7 +645,7 @@ def admin():
 @app.route('/admin/edit/<int:user_id>', methods=['GET', 'POST'])
 @login_required
 def edit_user(user_id):
-    conn = sqlite3.connect(DB_NAME)
+    conn = get_db_connection()
     if request.method == 'POST':
         first_name, last_name = request.form.get('first_name', '').strip(), request.form.get('last_name', '').strip()
         patronymic, email = request.form.get('patronymic', '').strip(), request.form.get('email', '').strip()
@@ -620,7 +681,7 @@ def admin_reports():
     if session.get('role') not in ['admin', 'local_admin']:
         flash('Нет прав', 'error');
         return redirect(url_for('main'))
-    conn = sqlite3.connect(DB_NAME)
+    conn = get_db_connection()
     if request.method == 'POST':
         if 'save_settings' in request.form:
             report_type = request.form.get('report_type')
@@ -645,7 +706,11 @@ def admin_reports():
                     (db_id, recipient_str, report_type, day_value, time_value))
 
             conn.commit()
-            update_scheduler()
+            try:
+                update_scheduler()
+            except Exception as e:
+                print(f"[SCHEDULER] Ошибка инициализации: {e}")
+
             flash(f'Настройки {"ежедневного " if report_type == "daily" else ""}отчета сохранены!', 'success')
 
         elif 'test_daily' in request.form and session.get('role') == 'admin':
@@ -695,7 +760,7 @@ def clients(): return render_template('clients.html')
 @app.route('/clients/physical')
 @login_required
 def clients_physical():
-    cl_list = sqlite3.connect(DB_NAME).cursor().execute(
+    cl_list = get_db_connection().cursor().execute(
         "SELECT id, last_name, first_name, patronymic, phone, email, position FROM clients").fetchall()
     return render_template('clients_physical.html', clients=cl_list)
 
@@ -710,7 +775,7 @@ def add_company():
         # 2. При отправке формы также проверяем скрытое поле (на всякий случай)
         project_id = request.form.get('project_id', type=int) or project_id
 
-        conn = sqlite3.connect(DB_NAME)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         # Создаем компанию как обычно
@@ -735,7 +800,7 @@ def add_company():
         return redirect(url_for('clients_companies'))
 
     # Для GET-запроса (просто открытие формы) готовим данные
-    conn = sqlite3.connect(DB_NAME)
+    conn = get_db_connection()
     available_clients = conn.cursor().execute("SELECT id, last_name, first_name, patronymic FROM clients").fetchall()
     conn.close()
 
@@ -753,7 +818,7 @@ def add_client_physical():
     if request.method == 'POST':
         company_id = request.form.get('company_id', type=int) or company_id
 
-        conn = sqlite3.connect(DB_NAME)
+        conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute('''INSERT INTO clients (last_name, first_name, patronymic, dob, description, phone, email, position) 
                           VALUES (?,?,?,?,?,?,?,?)''',
@@ -781,7 +846,7 @@ def add_client_physical():
 @app.route('/clients/physical/<int:client_id>')
 @login_required
 def view_client_physical(client_id):
-    conn = sqlite3.connect(DB_NAME)
+    conn = get_db_connection()
     client = conn.cursor().execute("SELECT * FROM clients WHERE id = ?", (client_id,)).fetchone()
     if not client: conn.close(); return redirect(url_for('clients_physical'))
 
@@ -804,7 +869,7 @@ def view_client_physical(client_id):
 @app.route('/clients/physical/<int:client_id>/edit', methods=['GET', 'POST'])
 @login_required
 def edit_client_physical(client_id):
-    conn = sqlite3.connect(DB_NAME)
+    conn = get_db_connection()
     if request.method == 'POST':
         conn.cursor().execute(
             '''UPDATE clients SET last_name=?, first_name=?, patronymic=?, dob=?, description=?, phone=?, email=?, position=? WHERE id=?''',
@@ -829,7 +894,7 @@ def add_client_event(client_id):
                                                                                                  session['username'])
     planned_date = request.form.get('planned_date', '')  # ОДНО ПОЛЕ ДАТЫ
 
-    conn = sqlite3.connect(DB_NAME)
+    conn = get_db_connection()
     conn.cursor().execute('''INSERT INTO events (client_id, company_id, project_id, event_type, start_date, end_date, responsible_user, description, status) 
                              VALUES (?, NULL, NULL, ?, ?, NULL, ?, ?, 'planned')''',
                           (client_id, request.form.get('event_type', ''), planned_date, responsible_user,
@@ -843,7 +908,7 @@ def add_client_event(client_id):
 @app.route('/clients/physical/<int:client_id>/complete_event/<int:event_id>')
 @login_required
 def complete_client_event(client_id, event_id):
-    conn = sqlite3.connect(DB_NAME);
+    conn = get_db_connection();
     conn.cursor().execute("UPDATE events SET status = 'completed' WHERE id = ?", (event_id,));
     conn.commit();
     conn.close()
@@ -853,7 +918,7 @@ def complete_client_event(client_id, event_id):
 @app.route('/clients/physical/<int:client_id>/cancel_event/<int:event_id>')
 @login_required
 def cancel_client_event(client_id, event_id):
-    conn = sqlite3.connect(DB_NAME);
+    conn = get_db_connection();
     conn.cursor().execute("UPDATE events SET status = 'cancelled' WHERE id = ?", (event_id,));
     conn.commit();
     conn.close()
@@ -863,12 +928,12 @@ def cancel_client_event(client_id, event_id):
 @app.route('/clients/physical/<int:client_id>/edit_event/<int:event_id>', methods=['GET', 'POST'])
 @login_required
 def edit_client_event(client_id, event_id):
-    conn = sqlite3.connect(DB_NAME)
+    conn = get_db_connection()
     event = conn.cursor().execute("SELECT * FROM events WHERE id = ?", (event_id,)).fetchone()
     conn.close()
     if not event: return redirect(url_for('view_client_physical', client_id=client_id))
     if request.method == 'POST':
-        conn = sqlite3.connect(DB_NAME)
+        conn = get_db_connection()
         conn.cursor().execute(
             '''UPDATE events SET status='completed', result=?, completion_desc=?, rating=? WHERE id=?''',
             (request.form.get('result', ''), request.form.get('completion_desc', ''), request.form.get('rating', 0),
@@ -883,7 +948,7 @@ def edit_client_event(client_id, event_id):
 @app.route('/clients/physical/<int:client_id>/event/<int:event_id>')
 @login_required
 def view_client_event(client_id, event_id):
-    conn = sqlite3.connect(DB_NAME)
+    conn = get_db_connection()
     event = conn.cursor().execute("SELECT * FROM events WHERE id = ? AND client_id = ?",
                                   (event_id, client_id)).fetchone()
     conn.close()
@@ -895,7 +960,7 @@ def view_client_event(client_id, event_id):
 @app.route('/clients/companies')
 @login_required
 def clients_companies():
-    com_list = sqlite3.connect(DB_NAME).cursor().execute(
+    com_list = get_db_connection().cursor().execute(
         '''SELECT c.id, c.name, c.type, c.activity, c.website, c.country, COUNT(ce.client_id) as emp_count FROM companies c LEFT JOIN company_employees ce ON c.id = ce.company_id GROUP BY c.id''').fetchall()
     return render_template('companies_list.html', companies=com_list)
 
@@ -906,7 +971,7 @@ def clients_companies():
 @app.route('/clients/companies/<int:company_id>')
 @login_required
 def view_company(company_id):
-    conn = sqlite3.connect(DB_NAME)
+    conn = get_db_connection()
     comp = conn.cursor().execute("SELECT * FROM companies WHERE id = ?", (company_id,)).fetchone()
     if not comp: conn.close(); return redirect(url_for('clients_companies'))
     employees = conn.cursor().execute(
@@ -929,7 +994,7 @@ def view_company(company_id):
 @app.route('/clients/companies/<int:company_id>/edit', methods=['GET', 'POST'])
 @login_required
 def edit_company(company_id):
-    conn = sqlite3.connect(DB_NAME)
+    conn = get_db_connection()
     if request.method == 'POST':
         # Редактируются ВСЕ поля
         conn.cursor().execute(
@@ -956,7 +1021,7 @@ def add_event(company_id):
                                                                                                  session['username'])
     planned_date = request.form.get('planned_date', '')  # ОДНО ПОЛЕ ДАТЫ
 
-    conn = sqlite3.connect(DB_NAME)
+    conn = get_db_connection()
     conn.cursor().execute('''INSERT INTO events (company_id, project_id, client_id, event_type, start_date, end_date, responsible_user, description, status) 
                              VALUES (?, NULL, NULL, ?, ?, NULL, ?, ?, 'planned')''',
                           (company_id, request.form.get('event_type', ''), planned_date, responsible_user,
@@ -970,7 +1035,7 @@ def add_event(company_id):
 @app.route('/clients/companies/<int:company_id>/complete_event/<int:event_id>')
 @login_required
 def complete_event(company_id, event_id):
-    conn = sqlite3.connect(DB_NAME);
+    conn = get_db_connection();
     conn.cursor().execute("UPDATE events SET status = 'completed' WHERE id = ?", (event_id,));
     conn.commit();
     conn.close()
@@ -980,7 +1045,7 @@ def complete_event(company_id, event_id):
 @app.route('/clients/companies/<int:company_id>/cancel_event/<int:event_id>')
 @login_required
 def cancel_event(company_id, event_id):
-    conn = sqlite3.connect(DB_NAME);
+    conn = get_db_connection();
     conn.cursor().execute("UPDATE events SET status = 'cancelled' WHERE id = ?", (event_id,));
     conn.commit();
     conn.close()
@@ -990,12 +1055,12 @@ def cancel_event(company_id, event_id):
 @app.route('/clients/companies/<int:company_id>/edit_event/<int:event_id>', methods=['GET', 'POST'])
 @login_required
 def edit_event(company_id, event_id):
-    conn = sqlite3.connect(DB_NAME)
+    conn = get_db_connection()
     event = conn.cursor().execute("SELECT * FROM events WHERE id = ?", (event_id,)).fetchone()
     conn.close()
     if not event: return redirect(url_for('view_company', company_id=company_id))
     if request.method == 'POST':
-        conn = sqlite3.connect(DB_NAME)
+        conn = get_db_connection()
         conn.cursor().execute(
             '''UPDATE events SET status='completed', result=?, completion_desc=?, rating=? WHERE id=?''',
             (request.form.get('result', ''), request.form.get('completion_desc', ''), request.form.get('rating', 0),
@@ -1010,7 +1075,7 @@ def edit_event(company_id, event_id):
 @app.route('/clients/companies/<int:company_id>/event/<int:event_id>')
 @login_required
 def view_event(company_id, event_id):
-    conn = sqlite3.connect(DB_NAME)
+    conn = get_db_connection()
     event = conn.cursor().execute("SELECT * FROM events WHERE id = ? AND company_id = ?",
                                   (event_id, company_id)).fetchone()
     conn.close()
@@ -1021,7 +1086,7 @@ def view_event(company_id, event_id):
 @app.route('/clients/companies/<int:company_id>/select_employee')
 @login_required
 def select_employee(company_id):
-    conn = sqlite3.connect(DB_NAME)
+    conn = get_db_connection()
     clients = conn.cursor().execute(
         '''SELECT id, last_name, first_name, patronymic, position FROM clients WHERE id NOT IN (SELECT client_id FROM company_employees WHERE company_id = ? AND status = 'РАБОТАЕТ')''',
         (company_id,)).fetchall()
@@ -1034,7 +1099,7 @@ def select_employee(company_id):
 def link_employee(company_id):
     client_id = request.form.get('client_id')
     if client_id:
-        conn = sqlite3.connect(DB_NAME)
+        conn = get_db_connection()
         try:
             conn.cursor().execute(
                 "INSERT INTO company_employees (company_id, client_id, status) VALUES (?,?, 'РАБОТАЕТ')",
@@ -1054,7 +1119,7 @@ def link_employee(company_id):
 @app.route('/clients/companies/<int:company_id>/unlink_employee/<int:client_id>', methods=['POST'])
 @login_required
 def unlink_employee(company_id, client_id):
-    conn = sqlite3.connect(DB_NAME)
+    conn = get_db_connection()
     conn.cursor().execute("UPDATE company_employees SET status = 'РАБОТАЛ' WHERE company_id = ? AND client_id = ?",
                           (company_id, client_id))
     conn.commit();
@@ -1067,7 +1132,7 @@ def unlink_employee(company_id, client_id):
 @app.route('/clients/projects')
 @login_required
 def clients_projects():
-    proj_list = sqlite3.connect(DB_NAME).cursor().execute(
+    proj_list = get_db_connection().cursor().execute(
         '''SELECT p.id, p.name, p.project_type, p.status, p.address, p.budget, COUNT(pc.company_id) as comp_count FROM projects p LEFT JOIN project_companies pc ON p.id = pc.project_id GROUP BY p.id''').fetchall()
     return render_template('projects_list.html', projects=proj_list)
 
@@ -1076,7 +1141,7 @@ def clients_projects():
 @login_required
 def add_project():
     if request.method == 'POST':
-        conn = sqlite3.connect(DB_NAME)
+        conn = get_db_connection()
         conn.cursor().execute(
             '''INSERT INTO projects (name, project_type, status, end_date, area, address, budget, cp_amount) VALUES (?, ?, ?, ?, ?, ?, ?, ?)''',
             (request.form.get('name', ''), request.form.get('project_type', ''), request.form.get('status', ''),
@@ -1092,7 +1157,7 @@ def add_project():
 @app.route('/clients/projects/<int:project_id>')
 @login_required
 def view_project(project_id):
-    conn = sqlite3.connect(DB_NAME)
+    conn = get_db_connection()
     proj = conn.cursor().execute("SELECT * FROM projects WHERE id = ?", (project_id,)).fetchone()
     if not proj: conn.close(); return redirect(url_for('clients_projects'))
     companies = conn.cursor().execute(
@@ -1112,7 +1177,7 @@ def view_project(project_id):
 @app.route('/clients/projects/<int:project_id>/edit', methods=['GET', 'POST'])
 @login_required
 def edit_project(project_id):
-    conn = sqlite3.connect(DB_NAME)
+    conn = get_db_connection()
     if request.method == 'POST':
         # Редактируются ВСЕ поля проекта
         conn.cursor().execute(
@@ -1139,7 +1204,7 @@ def add_project_event(project_id):
                                                                                                  session['username'])
     planned_date = request.form.get('planned_date', '')  # ОДНО ПОЛЕ ДАТЫ
 
-    conn = sqlite3.connect(DB_NAME)
+    conn = get_db_connection()
     conn.cursor().execute('''INSERT INTO events (project_id, company_id, client_id, event_type, start_date, end_date, responsible_user, description, status) 
                              VALUES (?, NULL, NULL, ?, ?, NULL, ?, ?, 'planned')''',
                           (project_id, request.form.get('event_type', ''), planned_date, responsible_user,
@@ -1153,7 +1218,7 @@ def add_project_event(project_id):
 @app.route('/clients/projects/<int:project_id>/complete_event/<int:event_id>')
 @login_required
 def complete_project_event(project_id, event_id):
-    conn = sqlite3.connect(DB_NAME);
+    conn = get_db_connection();
     conn.cursor().execute("UPDATE events SET status = 'completed' WHERE id = ?", (event_id,));
     conn.commit();
     conn.close()
@@ -1163,7 +1228,7 @@ def complete_project_event(project_id, event_id):
 @app.route('/clients/projects/<int:project_id>/cancel_event/<int:event_id>')
 @login_required
 def cancel_project_event(project_id, event_id):
-    conn = sqlite3.connect(DB_NAME);
+    conn = get_db_connection();
     conn.cursor().execute("UPDATE events SET status = 'cancelled' WHERE id = ?", (event_id,));
     conn.commit();
     conn.close()
@@ -1173,12 +1238,12 @@ def cancel_project_event(project_id, event_id):
 @app.route('/clients/projects/<int:project_id>/edit_event/<int:event_id>', methods=['GET', 'POST'])
 @login_required
 def edit_project_event(project_id, event_id):
-    conn = sqlite3.connect(DB_NAME)
+    conn = get_db_connection()
     event = conn.cursor().execute("SELECT * FROM events WHERE id = ?", (event_id,)).fetchone()
     conn.close()
     if not event: return redirect(url_for('view_project', project_id=project_id))
     if request.method == 'POST':
-        conn = sqlite3.connect(DB_NAME)
+        conn = get_db_connection()
         conn.cursor().execute(
             '''UPDATE events SET status='completed', result=?, completion_desc=?, rating=? WHERE id=?''',
             (request.form.get('result', ''), request.form.get('completion_desc', ''), request.form.get('rating', 0),
@@ -1193,7 +1258,7 @@ def edit_project_event(project_id, event_id):
 @app.route('/clients/projects/<int:project_id>/event/<int:event_id>')
 @login_required
 def view_project_event(project_id, event_id):
-    conn = sqlite3.connect(DB_NAME)
+    conn = get_db_connection()
     event = conn.cursor().execute("SELECT * FROM events WHERE id = ? AND project_id = ?",
                                   (event_id, project_id)).fetchone()
     conn.close()
@@ -1204,7 +1269,7 @@ def view_project_event(project_id, event_id):
 @app.route('/clients/projects/<int:project_id>/select_company')
 @login_required
 def select_company_for_project(project_id):
-    conn = sqlite3.connect(DB_NAME)
+    conn = get_db_connection()
     companies = conn.cursor().execute(
         '''SELECT id, name, type FROM companies WHERE id NOT IN (SELECT company_id FROM project_companies WHERE project_id = ?)''',
         (project_id,)).fetchall()
@@ -1217,7 +1282,7 @@ def select_company_for_project(project_id):
 def link_company_to_project(project_id):
     company_id = request.form.get('company_id')
     if company_id:
-        conn = sqlite3.connect(DB_NAME)
+        conn = get_db_connection()
         try:
             conn.cursor().execute("INSERT INTO project_companies (project_id, company_id) VALUES (?,?)",
                                   (project_id, company_id))
@@ -1232,7 +1297,7 @@ def link_company_to_project(project_id):
 @app.route('/clients/projects/<int:project_id>/unlink_company/<int:company_id>', methods=['POST'])
 @login_required
 def unlink_company_from_project(project_id, company_id):
-    conn = sqlite3.connect(DB_NAME)
+    conn = get_db_connection()
     conn.cursor().execute("DELETE FROM project_companies WHERE project_id = ? AND company_id = ?",
                           (project_id, company_id))
     conn.commit();
