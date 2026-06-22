@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Карточка проекта</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <style>.comp-clickable-row { cursor: pointer; transition: background 0.2s; } .comp-clickable-row:hover { background-color: #e7f1ff; }</style>
+</head>
+<body class="bg-light">
+    <nav class="navbar navbar-dark bg-dark mb-4">
+        <div class="container-fluid">
+            <a href="{{ url_for('clients_projects') }}" class="btn btn-outline-light btn-sm">← К списку проектов</a>
+        </div>
+    </nav>
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-10">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h3>Проект: <span class="text-warning text-dark">{{ project[1] if project else 'Новый' }}</span></h3>
+                    {% if project and not is_editing %}
+                        <a href="{{ url_for('edit_project', project_id=project[0]) }}" class="btn btn-primary">✎ Редактировать</a>
+                    {% endif %}
+                </div>
+
+                <ul class="nav nav-tabs mb-3" id="projectTabs" role="tablist">
+                    <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-data">Данные проекта</button></li>
+                    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-events">Мероприятия</button></li>
+                </ul>
+
+                <div class="tab-content">
+                    <!-- ВКЛАДКА 1: ДАННЫЕ ПРОЕКТА + ТАБЛИЦА КОМПАНИЙ -->
+                    <div class="tab-pane fade show active" id="tab-data">
+
+                        <!-- 1. Основная форма проекта -->
+                        <div class="card shadow mb-4">
+                            <div class="card-body">
+                                <form method="POST" action="{{ url_for('edit_project', project_id=project[0]) if project and is_editing else url_for('add_project') }}">
+                                    <div class="row mb-3">
+                                        <div class="col-md-8">
+                                            <label class="form-label">Наименование *</label>
+                                            {% if project and not is_editing %}
+                                                <input type="text" class="form-control" value="{{ project[1] }}" readonly>
+                                            {% else %}
+                                                <input type="text" name="name" class="form-control" value="{{ project[1] if project else '' }}" required>
+                                            {% endif %}
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label">Тип проекта</label>
+                                            {% if project and not is_editing %}
+                                                <input type="text" class="form-control" value="{{ project[2] }}" readonly>
+                                            {% else %}
+                                                <select name="project_type" class="form-select">
+                                                    <option value="">Выберите тип проекта...</option>
+                                                    <!-- Новые типы (полные названия) -->
+                                                    <option value="Equipment Supply services" {% if project and project[2]=='Equipment Supply services' %}selected{% endif %}>Equipment Supply services</option>
+                                                    <option value="Facility Management Services" {% if project and project[2]=='Facility Management Services' %}selected{% endif %}>Facility Management Services</option>
+                                                    <option value="General Contractor functions" {% if project and project[2]=='General Contractor functions' %}selected{% endif %}>General Contractor functions</option>
+                                                    <option value="Utilities Installations" {% if project and project[2]=='Utilities Installations' %}selected{% endif %}>Utilities Installations</option>
+                                                </select>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="row mb-3">
+                                        <div class="col-md-4">
+                                            <label class="form-label">Статус</label>
+                                            {% if project and not is_editing %}
+                                                <input type="text" class="form-control" value="{{ project[3] }}" readonly>
+                                            {% else %}
+                                                <select name="status" class="form-select">
+                                                    {% for st in ['S1. First contact', 'S2. Meeting', 'S3. Ongoing tender', 'S4. WIN', 'S5. LOST', 'S6. No way'] %}
+                                                        <option value="{{ st }}" {% if project and project[3]==st %}selected{% endif %}>{{ st }}</option>
+                                                    {% endfor %}
+                                                </select>
+                                            {% endif %}
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label">Планируемая дата завершения</label>
+                                            {% if project and not is_editing %}
+                                                <input type="text" class="form-control" value="{{ project[4] }}" readonly>
+                                            {% else %}
+                                                <input type="date" name="end_date" class="form-control" value="{{ project[4] if project else '' }}">
+                                            {% endif %}
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label">Площадь (м²)</label>
+                                            {% if project and not is_editing %}
+                                                <input type="text" class="form-control" value="{{ project[5] }}" readonly>
+                                            {% else %}
+                                                <input type="text" name="area" class="form-control" value="{{ project[5] if project else '' }}">
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="row mb-3">
+                                        <div class="col-md-6">
+                                            <label class="form-label">Адрес *</label>
+                                            {% if project and not is_editing %}
+                                                <input type="text" class="form-control" value="{{ project[6] }}" readonly>
+                                            {% else %}
+                                                <input type="text" name="address" class="form-control" value="{{ project[6] if project else '' }}" required>
+                                            {% endif %}
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label class="form-label">Бюджет (без НДС)</label>
+                                            {% if project and not is_editing %}
+                                                <div class="input-group"><input type="text" class="form-control" value="{{ project[7] }}" readonly><span class="input-group-text">€</span></div>
+                                            {% else %}
+                                                <div class="input-group"><input type="text" name="budget" class="form-control" value="{{ project[7] if project else '' }}"><span class="input-group-text">€</span></div>
+                                            {% endif %}
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label class="form-label">Сумма КП (без НДС)</label>
+                                            {% if project and not is_editing %}
+                                                <div class="input-group"><input type="text" class="form-control" value="{{ project[8] }}" readonly><span class="input-group-text">€</span></div>
+                                            {% else %}
+                                                <div class="input-group"><input type="text" name="cp_amount" class="form-control" value="{{ project[8] if project else '' }}"><span class="input-group-text">€</span></div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+
+                                    {% if not project %}
+                                        <button type="submit" class="btn btn-warning text-dark">Создать проект</button>
+                                    {% elif is_editing %}
+                                        <a href="{{ url_for('view_project', project_id=project[0]) }}" class="btn btn-secondary">Отмена</a>
+                                        <button type="submit" class="btn btn-warning text-dark">Сохранить изменения</button>
+                                    {% endif %}
+                                </form>
+                            </div>
+                        </div>
+
+                        <!-- 2. ТАБЛИЦА КОМПАНИЙ И ДВЕ КНОПКИ (появляется только если проект уже создан) -->
+                        {% if project %}
+                        <div class="card shadow">
+                            <div class="card-header bg-warning text-dark">
+                                <h5 class="mb-0">Компании в проекте</h5>
+                            </div>
+                            <div class="card-body">
+                                {% if companies %}
+                                <table class="table table-sm table-hover mb-3">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th style="width:50px">№</th>
+                                            <th>Наименование</th>
+                                            <th>Тип</th>
+                                            <th style="width:100px" class="text-center">Действия</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for c in companies %}
+                                        <tr class="comp-clickable-row" ondblclick="window.location.href='{{ url_for('view_company', company_id=c[0], return_to=request.path) }}'">
+                                            <td>{{ c[0] }}</td>
+                                            <td class="fw-bold">{{ c[1] }}</td>
+                                            <td><span class="badge bg-secondary">{{ c[2] }}</span></td>
+                                            <td class="text-center">
+                                                <form method="POST" action="{{ url_for('unlink_company_from_project', project_id=project[0], company_id=c[0]) }}" class="d-inline" onsubmit="return confirm('Удалить компанию из проекта?');">
+                                                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Удалить">✕</button>
+                                                </form>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                                {% else %}
+                                <div class="text-center p-3 text-muted mb-3">В проекте пока нет компаний.</div>
+                                {% endif %}
+
+                                <!-- ДВЕ КНОПКИ ДОБАВЛЕНИЯ КОМПАНИЙ (СНИЗУ СЛЕВА) -->
+                                <div class="d-flex gap-2">
+                                    <a href="{{ url_for('select_company_for_project', project_id=project[0]) }}" class="btn btn-primary">
+                                        <i class="bi bi-search me-1"></i> Добавить из списка
+                                    </a>
+                                    <a href="{{ url_for('add_company', project_id=project[0]) }}" class="btn btn-success">
+                                        <i class="bi bi-plus-lg me-1"></i> Создать новую
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        {% else %}
+                        <div class="alert alert-info mt-3">
+                            <i class="bi bi-info-circle me-2"></i> Сначала нажмите "Создать проект", чтобы появилась возможность добавлять компании.
+                        </div>
+                        {% endif %}
+
+                    </div>
+
+                    <!-- ВКЛАДКА 2: МЕРОПРИЯТИЯ ПРОЕКТА -->
+                    <div class="tab-pane fade" id="tab-events">
+                        {% if project %}
+                        <div class="d-flex justify-content-end mb-3">
+                            <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addProjectEventModal">+ Создать мероприятие</button>
+                        </div>
+                        <div class="row">
+                            <!-- Запланированные -->
+                            <div class="col-md-4">
+                                <div class="card shadow h-100">
+                                    <div class="card-header bg-warning text-dark"><h5 class="mb-0">Запланированные</h5></div>
+                                    <div class="card-body p-0">
+                                        {% if planned_events %}
+                                            <ul class="list-group list-group-flush">
+                                                {% for ev in planned_events %}
+                                                <li class="list-group-item">
+                                                    <div class="mb-2">
+                                                        <span class="badge bg-primary">{{ ev[1] }}</span>
+                                                        <small class="text-muted d-block">{{ ev[2] }} – {{ ev[3] }}</small>
+                                                        <small class="text-muted">Отв: {{ ev[4] }}</small>
+                                                        <p class="mb-0 small mt-1">{{ ev[5] }}</p>
+                                                    </div>
+                                                    <div class="d-flex gap-2 mt-2">
+                                                        <a href="{{ url_for('edit_project_event', project_id=project[0], event_id=ev[0]) }}" class="btn btn-sm btn-outline-success flex-fill">✓ Выполнить</a>
+                                                        <a href="{{ url_for('cancel_project_event', project_id=project[0], event_id=ev[0]) }}" class="btn btn-sm btn-outline-danger flex-fill" onclick="return confirm('Отменить мероприятие?')">✕ Отменить</a>
+                                                    </div>
+                                                </li>
+                                                {% endfor %}
+                                            </ul>
+                                        {% else %}
+                                            <div class="p-3 text-center text-muted">Нет задач</div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- Выполненные -->
+                            <div class="col-md-4">
+                                <div class="card shadow h-100">
+                                    <div class="card-header bg-success text-white"><h5 class="mb-0">Выполненные</h5></div>
+                                    <div class="card-body p-0">
+                                        {% if completed_events %}
+                                            <ul class="list-group list-group-flush">
+                                                {% for ev in completed_events %}
+                                                <li class="list-group-item bg-light emp-clickable-row" ondblclick="window.location.href='{{ url_for('view_project_event', project_id=project[0], event_id=ev[0]) }}'">
+                                                    <div class="d-flex justify-content-between">
+                                                        <div class="w-100">
+                                                            <span class="badge bg-secondary">{{ ev[1] }}</span>
+                                                            <small class="text-muted d-block text-decoration-line-through">{{ ev[2] }}</small>
+                                                            <div class="mt-1 p-1 bg-white border rounded small">
+                                                                <strong>Итог:</strong> {{ ev[7] or '-' }} ({{ ev[9] }}/5 ⭐)
+                                                            </div>
+                                                        </div>
+                                                        <a href="{{ url_for('view_project_event', project_id=project[0], event_id=ev[0]) }}" class="btn btn-sm btn-outline-primary ms-2" title="Просмотр">👁</a>
+                                                    </div>
+                                                </li>
+                                                {% endfor %}
+                                            </ul>
+                                        {% else %}
+                                            <div class="p-3 text-center text-muted">Нет выполненных</div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- Отмененные -->
+                            <div class="col-md-4">
+                                <div class="card shadow h-100">
+                                    <div class="card-header bg-danger text-white"><h5 class="mb-0">Отмененные</h5></div>
+                                    <div class="card-body p-0">
+                                        {% if cancelled_events %}
+                                            <ul class="list-group list-group-flush">
+                                                {% for ev in cancelled_events %}
+                                                <li class="list-group-item bg-light opacity-75">
+                                                    <div>
+                                                        <span class="badge bg-dark">{{ ev[1] }}</span>
+                                                        <small class="text-muted d-block text-decoration-line-through">{{ ev[2] }}</small>
+                                                        <small class="text-danger">Отменено</small>
+                                                    </div>
+                                                </li>
+                                                {% endfor %}
+                                            </ul>
+                                        {% else %}
+                                            <div class="p-3 text-center text-muted">Нет отмененных</div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% else %}
+                            <div class="text-center p-5 text-muted">Сначала сохраните проект, чтобы добавлять мероприятия.</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- МОДАЛЬНОЕ ОКНО: Создание мероприятия для Проекта -->
+    {% if project %}
+    <div class="modal fade" id="addProjectEventModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <form method="POST" action="{{ url_for('add_project_event', project_id=project[0]) }}">
+                    <div class="modal-header bg-success text-white">
+                        <h5 class="modal-title">Создать мероприятие для проекта</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">Вид мероприятия *</label>
+                            <select name="event_type" class="form-select" required>
+                                <option value="">Выберите тип...</option>
+                                <option value="М2. Звонок/Письмо">М2. Звонок/Письмо</option>
+                                <option value="М3. Встреча с клиентом">М3. Встреча с клиентом</option>
+                                <option value="М4. Встреча с партнером">М4. Встреча с партнером</option>
+                                <option value="М5. Получение запроса КП">М5. Получение запроса КП</option>
+                                <option value="М6. Изменение запроса КП">М6. Изменение запроса КП</option>
+                                <option value="М7. Отправка КП">М7. Отправка КП</option>
+                                <option value="М7.1. Повторная отправка КП">М7.1. Повторная отправка КП</option>
+                                <option value="М8. Получение заказа">М8. Получение заказа</option>
+                                <option value="М9. Проигрыш">М9. Проигрыш</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Запланировано на *</label>
+                            <input type="date" name="planned_date" class="form-control" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Ответственный *</label>
+                            {% if session['role'] == 'manager' %}
+                                <input type="text" class="form-control" value="{{ session['username'] }}" readonly>
+                                <input type="hidden" name="responsible_user" value="{{ session['username'] }}">
+                            {% else %}
+                                <input type="text" name="responsible_user" class="form-control" value="{{ session['username'] }}" required>
+                            {% endif %}
+                        </div>
+                        <div class="mb-3"><label class="form-label">Описание задачи</label><textarea name="description" class="form-control" rows="3"></textarea></div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                        <button type="submit" class="btn btn-success">Создать мероприятие</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</body>
+</html>

@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Карточка клиента</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</head>
+<body class="bg-light">
+    <nav class="navbar navbar-dark bg-dark mb-4">
+        <div class="container-fluid">
+            {% if request.args.get('return_to') %}
+                <a href="{{ request.args.get('return_to') }}" class="btn btn-outline-light btn-sm">
+                    <i class="bi bi-arrow-left me-1"></i> Вернуться в компанию
+                </a>
+            {% else %}
+                <a href="{{ url_for('clients_physical') }}" class="btn btn-outline-light btn-sm">
+                    <i class="bi bi-arrow-left me-1"></i> К списку физ. лиц
+                </a>
+            {% endif %}
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-9">
+                {% if client %}
+                <ul class="nav nav-tabs mb-3" id="clientTabs" role="tablist">
+                    <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-data">Данные</button></li>
+                    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-employers">Работодатели</button></li>
+                    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-events">Мероприятия</button></li>
+                </ul>
+                {% endif %}
+
+                <div class="tab-content">
+                    <!-- ВКЛАДКА 1: ДАННЫЕ -->
+                    <div class="tab-pane fade show active" id="tab-data">
+                        <div class="card shadow">
+                            <div class="card-header bg-primary text-white">
+                                <h5 class="mb-0">{% if client %}Физическое лицо №{{ client[0] }}{% if is_editing %} <span class="badge bg-warning text-dark">Ред.</span>{% endif %}{% else %}Новое физическое лицо{% endif %}</h5>
+                            </div>
+                            <div class="card-body">
+                                <form method="POST" action="{{ url_for('edit_client_physical', client_id=client[0]) if client and is_editing else url_for('add_client_physical') }}">
+                                    {% if company_id %}
+                                    <input type="hidden" name="company_id" value="{{ company_id }}">
+                                    {% endif %}
+                                    <div class="row mb-3">
+                                        <div class="col-md-4"><label class="form-label">Фамилия *</label><input type="text" name="last_name" class="form-control" value="{{ client[1] if client else '' }}" required {% if client and not is_editing %}readonly{% endif %}></div>
+                                        <div class="col-md-4"><label class="form-label">Имя *</label><input type="text" name="first_name" class="form-control" value="{{ client[2] if client else '' }}" required {% if client and not is_editing %}readonly{% endif %}></div>
+                                        <div class="col-md-4"><label class="form-label">Отчество</label><input type="text" name="patronymic" class="form-control" value="{{ client[3] if client else '' }}" {% if client and not is_editing %}readonly{% endif %}></div>
+                                    </div>
+                                    <div class="row mb-3">
+                                        <div class="col-md-6"><label class="form-label">Дата рождения</label><input type="date" name="dob" class="form-control" value="{{ client[4] if client else '' }}" {% if client and not is_editing %}readonly{% endif %}></div>
+                                        <div class="col-md-6"><label class="form-label">Должность *</label><input type="text" name="position" class="form-control" value="{{ client[8] if client else '' }}" required {% if client and not is_editing %}readonly{% endif %}></div>
+                                    </div>
+                                    <div class="row mb-3">
+                                        <div class="col-md-6"><label class="form-label">Номер телефона *</label><input type="tel" name="phone" class="form-control" value="{{ client[6] if client else '' }}" required {% if client and not is_editing %}readonly{% endif %}></div>
+                                        <div class="col-md-6"><label class="form-label">Почта</label><input type="email" name="email" class="form-control" value="{{ client[7] if client else '' }}" {% if client and not is_editing %}readonly{% endif %}></div>
+                                    </div>
+                                    <div class="mb-3"><label class="form-label">Описание</label><textarea name="description" class="form-control" rows="4" {% if client and not is_editing %}readonly{% endif %}>{{ client[5] if client else '' }}</textarea></div>
+                                    <div class="d-flex justify-content-between align-items-center mt-4 pt-3 border-top">
+                                        <div>{% if client and not is_editing %}<a href="{{ url_for('edit_client_physical', client_id=client[0]) }}" class="btn btn-primary">✎ Редактировать</a>{% endif %}</div>
+                                        <div class="d-flex gap-2">
+                                            {% if not client %}<button type="submit" class="btn btn-success">Сохранить</button>
+                                            {% elif is_editing %}<a href="{{ url_for('view_client_physical', client_id=client[0]) }}" class="btn btn-secondary">Отмена</a><button type="submit" class="btn btn-success">Сохранить изменения</button>
+                                            {% else %}<span class="badge bg-secondary align-self-center py-2">Режим просмотра</span>{% endif %}
+                                        </div>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ВКЛАДКА 2: РАБОТОДАТЕЛИ -->
+                    {% if client %}
+                    <div class="tab-pane fade" id="tab-employers">
+                        <div class="card shadow">
+                            <div class="card-header bg-info text-white"><h5 class="mb-0">История трудоустройства</h5></div>
+                            <div class="card-body p-0">
+                                {% if employers %}
+                                <table class="table table-hover mb-0">
+                                    <thead class="table-light"><tr><th style="width:50px">№</th><th>Название компании</th><th style="width:150px">Статус</th></tr></thead>
+                                    <tbody>
+                                        {% for emp in employers %}
+                                        <tr class="employer-clickable-row" style="cursor:pointer" ondblclick="window.location.href='{{ url_for('view_company', company_id=emp[0]) }}'">
+                                            <td>{{ emp[0] }}</td><td class="fw-bold">{{ emp[1] }}</td>
+                                            <td>{% if emp[2] == 'РАБОТАЕТ' %}<span class="badge bg-success">РАБОТАЕТ</span>{% else %}<span class="badge bg-secondary">РАБОТАЛ</span>{% endif %}</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                                {% else %}<div class="text-center p-4 text-muted">Сотрудник пока не числится ни в одной компании.</div>{% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- ВКЛАДКА 3: МЕРОПРИЯТИЯ -->
+                    {% if client %}
+                    <div class="tab-pane fade" id="tab-events">
+                        <div class="d-flex justify-content-end mb-3">
+                            <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addClientEventModal">+ Создать мероприятие</button>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="card shadow h-100">
+                                    <div class="card-header bg-warning text-dark"><h5 class="mb-0">Запланированные</h5></div>
+                                    <div class="card-body p-0">
+                                        {% if planned_events %}
+                                        <ul class="list-group list-group-flush">
+                                            {% for ev in planned_events %}
+                                            <li class="list-group-item">
+                                                <div class="mb-2"><span class="badge bg-primary">{{ ev[1] }}</span><small class="text-muted d-block">{{ ev[2] }} – {{ ev[3] }}</small><small class="text-muted">Отв: {{ ev[4] }}</small><p class="mb-0 small mt-1">{{ ev[5] }}</p></div>
+                                                <div class="d-flex gap-2 mt-2">
+                                                    <a href="{{ url_for('edit_client_event', client_id=client[0], event_id=ev[0]) }}" class="btn btn-sm btn-outline-success flex-fill">✓ Выполнить</a>
+                                                    <a href="{{ url_for('cancel_client_event', client_id=client[0], event_id=ev[0]) }}" class="btn btn-sm btn-outline-danger flex-fill" onclick="return confirm('Отменить?')">✕ Отменить</a>
+                                                </div>
+                                            </li>
+                                            {% endfor %}
+                                        </ul>
+                                        {% else %}<div class="p-3 text-center text-muted">Нет задач</div>{% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card shadow h-100">
+                                    <div class="card-header bg-success text-white"><h5 class="mb-0">Выполненные</h5></div>
+                                    <div class="card-body p-0">
+                                        {% if completed_events %}
+                                        <ul class="list-group list-group-flush">
+                                            {% for ev in completed_events %}
+                                            <li class="list-group-item bg-light emp-clickable-row" ondblclick="window.location.href='{{ url_for('view_client_event', client_id=client[0], event_id=ev[0]) }}'">
+                                                <div class="d-flex justify-content-between">
+                                                    <div class="w-100"><span class="badge bg-secondary">{{ ev[1] }}</span><small class="text-muted d-block text-decoration-line-through">{{ ev[2] }}</small><div class="mt-1 p-1 bg-white border rounded small"><strong>Итог:</strong> {{ ev[7] or '-' }} ({{ ev[9] }}/5 ⭐)</div></div>
+                                                    <a href="{{ url_for('view_client_event', client_id=client[0], event_id=ev[0]) }}" class="btn btn-sm btn-outline-primary ms-2" title="Просмотр">👁</a>
+                                                </div>
+                                            </li>
+                                            {% endfor %}
+                                        </ul>
+                                        {% else %}<div class="p-3 text-center text-muted">Нет выполненных</div>{% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card shadow h-100">
+                                    <div class="card-header bg-danger text-white"><h5 class="mb-0">Отмененные</h5></div>
+                                    <div class="card-body p-0">
+                                        {% if cancelled_events %}
+                                        <ul class="list-group list-group-flush">
+                                            {% for ev in cancelled_events %}
+                                            <li class="list-group-item bg-light opacity-75"><div><span class="badge bg-dark">{{ ev[1] }}</span><small class="text-muted d-block text-decoration-line-through">{{ ev[2] }}</small><small class="text-danger">Отменено</small></div></li>
+                                            {% endfor %}
+                                        </ul>
+                                        {% else %}<div class="p-3 text-center text-muted">Нет отмененных</div>{% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- МОДАЛЬНОЕ ОКНО: Создание мероприятия для Физ. лица -->
+    {% if client %}
+    <div class="modal fade" id="addClientEventModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <form method="POST" action="{{ url_for('add_client_event', client_id=client[0]) }}">
+                    <div class="modal-header bg-success text-white">
+                        <h5 class="modal-title">Создать мероприятие</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">Вид мероприятия *</label>
+                            <select name="event_type" class="form-select" required>
+                                <option value="">Выберите тип...</option>
+                                <option value="М2. Звонок/Письмо">М2. Звонок/Письмо</option>
+                                <option value="М3. Встреча с клиентом">М3. Встреча с клиентом</option>
+                                <option value="М4. Встреча с партнером">М4. Встреча с партнером</option>
+                                <option value="М5. Получение запроса КП">М5. Получение запроса КП</option>
+                                <option value="М6. Изменение запроса КП">М6. Изменение запроса КП</option>
+                                <option value="М7. Отправка КП">М7. Отправка КП</option>
+                                <option value="М7.1. Повторная отправка КП">М7.1. Повторная отправка КП</option>
+                                <option value="М8. Получение заказа">М8. Получение заказа</option>
+                                <option value="М9. Проигрыш">М9. Проигрыш</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Запланировано на *</label>
+                            <input type="date" name="planned_date" class="form-control" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Ответственный *</label>
+                            {% if session['role'] == 'manager' %}
+                                <input type="text" class="form-control" value="{{ session['username'] }}" readonly>
+                                <input type="hidden" name="responsible_user" value="{{ session['username'] }}">
+                            {% else %}
+                                <!-- Для упрощения в этом модальном окне оставим текстовое поле или можно передать список users_list из Python -->
+                                <input type="text" name="responsible_user" class="form-control" value="{{ session['username'] }}" required>
+                            {% endif %}
+                        </div>
+                        <div class="mb-3"><label class="form-label">Описание задачи</label><textarea name="description" class="form-control" rows="3"></textarea></div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                        <button type="submit" class="btn btn-success">Создать</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</body>
+</html>

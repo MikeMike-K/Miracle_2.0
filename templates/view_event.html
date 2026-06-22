@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Просмотр мероприятия</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --corp-dark-blue: #0F172A;
+            --corp-mid-blue: #1E3A8A;
+            --corp-light-blue: #38BDF8;
+            --corp-orange: #F97316;
+            --corp-yellow: #FBBF24;
+            --corp-bg-light: #F0F9FF;
+        }
+        body {
+            background-color: var(--corp-bg-light);
+            font-family: 'Inter', sans-serif;
+        }
+        /* Навигационная панель */
+        .navbar-dark.bg-dark {
+            background: linear-gradient(90deg, var(--corp-dark-blue), var(--corp-mid-blue)) !important;
+            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.1);
+        }
+        /* Карточки */
+        .card {
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .card:hover {
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+        /* Заголовки карточек */
+        .card-header.bg-primary { background-color: var(--corp-mid-blue) !important; }
+        .card-header.bg-success { background-color: #10B981 !important; } /* Изумрудный для успеха */
+        .card-header.bg-warning { background-color: var(--corp-yellow) !important; color: var(--corp-dark-blue) !important; }
+        .card-header.bg-info { background-color: var(--corp-light-blue) !important; color: var(--corp-dark-blue) !important; }
+
+        /* Кнопки */
+        .btn-primary {
+            background-color: var(--corp-mid-blue);
+            border-color: var(--corp-mid-blue);
+        }
+        .btn-primary:hover {
+            background-color: var(--corp-dark-blue);
+            border-color: var(--corp-dark-blue);
+        }
+        .btn-success {
+            background-color: var(--corp-orange);
+            border-color: var(--corp-orange);
+            color: white;
+        }
+        .btn-success:hover {
+            background-color: #ea580c;
+            border-color: #ea580c;
+            color: white;
+        }
+        .btn-warning {
+            background-color: var(--corp-yellow);
+            border-color: var(--corp-yellow);
+            color: var(--corp-dark-blue);
+            font-weight: 600;
+        }
+        /* Таблицы */
+        .table-hover tbody tr:hover {
+            background-color: rgba(56, 189, 248, 0.1); /* Легкий голубой при наведении */
+        }
+        /* Вкладки (Tabs) */
+        .nav-tabs .nav-link.active {
+            color: var(--corp-mid-blue);
+            border-top: 3px solid var(--corp-orange);
+            font-weight: 600;
+        }
+        .nav-tabs .nav-link {
+            color: #64748B;
+        }
+        .nav-tabs .nav-link:hover {
+            color: var(--corp-mid-blue);
+            border-color: transparent;
+        }
+    </style>
+</head>
+<body class="bg-light">
+    <nav class="navbar navbar-dark bg-dark mb-4">
+        <div class="container-fluid">
+            <a href="{{ url_for('view_company', company_id=company_id) }}" class="btn btn-outline-light btn-sm">← Назад к компании</a>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="card shadow">
+                    <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                        <h4 class="mb-0">Выполненное мероприятие</h4>
+                        <span class="badge bg-light text-dark">ID: {{ event[0] }}</span>
+                    </div>
+                    <div class="card-body">
+
+                        <!-- Блок 1: Исходные данные -->
+                        <h5 class="border-bottom pb-2 mb-3 text-muted">📋 Исходные данные</h5>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label text-muted small">Вид мероприятия</label>
+                                <div class="form-control-plaintext fw-bold">{{ event[2] }}</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label text-muted small">Ответственный</label>
+                                <div class="form-control-plaintext fw-bold">{{ event[5] }}</div>
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label text-muted small">Дата начала</label>
+                                <div class="form-control-plaintext">{{ event[3] }}</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label text-muted small">Дата конца</label>
+                                <div class="form-control-plaintext">{{ event[4] or 'Не указана' }}</div>
+                            </div>
+                        </div>
+                        <div class="mb-4">
+                            <label class="form-label text-muted small">Описание задачи</label>
+                            <div class="form-control-plaintext bg-light p-2 rounded border">{{ event[6] or 'Нет описания' }}</div>
+                        </div>
+
+                        <!-- Блок 2: Результаты -->
+                        <h5 class="border-bottom pb-2 mb-3 mt-4 text-success">✅ Результат завершения</h5>
+                        <div class="mb-3">
+                            <label class="form-label text-muted small">Итоговый результат</label>
+                            <div class="form-control-plaintext fw-bold text-primary fs-5">{{ event[8] or 'Не указан' }}</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label text-muted small">Рейтинг</label>
+                            <div class="form-control-plaintext fs-4">
+                                <!-- Генерация звездочек на основе рейтинга -->
+                                {% set rating = event[10] | int %}
+                                {% for i in range(rating) %}⭐{% endfor %}
+                                {% for i in range(5 - rating) %}☆{% endfor %}
+                                <span class="text-muted fs-6 ms-2">({{ rating }}/5)</span>
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label text-muted small">Описание результата</label>
+                            <div class="form-control-plaintext bg-light p-3 rounded border" style="white-space: pre-wrap;">{{ event[9] or 'Нет описания' }}</div>
+                        </div>
+
+                    </div>
+                    <div class="card-footer bg-light text-end">
+                        <a href="{{ url_for('view_company', company_id=company_id) }}" class="btn btn-secondary">← Вернуться к компании</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

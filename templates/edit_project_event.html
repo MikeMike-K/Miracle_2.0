@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Завершение мероприятия</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --corp-dark-blue: #0F172A;
+            --corp-mid-blue: #1E3A8A;
+            --corp-light-blue: #38BDF8;
+            --corp-orange: #F97316;
+            --corp-yellow: #FBBF24;
+            --corp-bg-light: #F0F9FF;
+        }
+        body {
+            background-color: var(--corp-bg-light);
+            font-family: 'Inter', sans-serif;
+        }
+        /* Навигационная панель */
+        .navbar-dark.bg-dark {
+            background: linear-gradient(90deg, var(--corp-dark-blue), var(--corp-mid-blue)) !important;
+            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.1);
+        }
+        /* Карточки */
+        .card {
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .card:hover {
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+        /* Заголовки карточек */
+        .card-header.bg-primary { background-color: var(--corp-mid-blue) !important; }
+        .card-header.bg-success { background-color: #10B981 !important; } /* Изумрудный для успеха */
+        .card-header.bg-warning { background-color: var(--corp-yellow) !important; color: var(--corp-dark-blue) !important; }
+        .card-header.bg-info { background-color: var(--corp-light-blue) !important; color: var(--corp-dark-blue) !important; }
+
+        /* Кнопки */
+        .btn-primary {
+            background-color: var(--corp-mid-blue);
+            border-color: var(--corp-mid-blue);
+        }
+        .btn-primary:hover {
+            background-color: var(--corp-dark-blue);
+            border-color: var(--corp-dark-blue);
+        }
+        .btn-success {
+            background-color: var(--corp-orange);
+            border-color: var(--corp-orange);
+            color: white;
+        }
+        .btn-success:hover {
+            background-color: #ea580c;
+            border-color: #ea580c;
+            color: white;
+        }
+        .btn-warning {
+            background-color: var(--corp-yellow);
+            border-color: var(--corp-yellow);
+            color: var(--corp-dark-blue);
+            font-weight: 600;
+        }
+        /* Таблицы */
+        .table-hover tbody tr:hover {
+            background-color: rgba(56, 189, 248, 0.1); /* Легкий голубой при наведении */
+        }
+        /* Вкладки (Tabs) */
+        .nav-tabs .nav-link.active {
+            color: var(--corp-mid-blue);
+            border-top: 3px solid var(--corp-orange);
+            font-weight: 600;
+        }
+        .nav-tabs .nav-link {
+            color: #64748B;
+        }
+        .nav-tabs .nav-link:hover {
+            color: var(--corp-mid-blue);
+            border-color: transparent;
+        }
+    </style>
+</head>
+<body class="bg-light">
+    <div class="container mt-5">
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="card shadow">
+                    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                        <h4 class="mb-0">Завершение мероприятия проекта</h4>
+                        <small class="badge bg-light text-dark">ID: {{ event[0] }}</small>
+                    </div>
+                    <div class="card-body">
+                        <form method="POST">
+                            <h5 class="border-bottom pb-2 mb-3 text-muted">📋 Исходные данные (изменение запрещено)</h5>
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Вид мероприятия</label>
+                                    <input type="text" class="form-control" value="{{ event[3] }}" readonly>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Ответственный</label>
+                                    <input type="text" class="form-control" value="{{ event[6] }}" readonly>
+                                </div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Дата начала</label>
+                                    <input type="text" class="form-control" value="{{ event[4] }}" readonly>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Дата конца</label>
+                                    <input type="text" class="form-control" value="{{ event[5] or '-' }}" readonly>
+                                </div>
+                            </div>
+                            <div class="mb-4">
+                                <label class="form-label">Описание задачи</label>
+                                <textarea class="form-control" rows="2" readonly>{{ event[7] or 'Нет описания' }}</textarea>
+                            </div>
+
+                            <h5 class="border-bottom pb-2 mb-3 mt-4">✅ Результат завершения</h5>
+                            <div class="mb-3">
+                                <label class="form-label">Результат *</label>
+                                <select name="result" class="form-select" required>
+                                    <option value="">Выберите результат...</option>
+                                    <option value="R1. Назначен звонок">R1. Назначен звонок</option>
+                                    <option value="R2. Назначена встреча">R2. Назначена встреча</option>
+                                    <option value="R3. Назначен запрос КП">R3. Назначен запрос КП</option>
+                                    <option value="No way">No way</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Описание результата</label>
+                                <textarea name="completion_desc" class="form-control" rows="3" placeholder="Кратко опишите итог..."></textarea>
+                            </div>
+                            <div class="mb-4">
+                                <label class="form-label">Рейтинг (1-5) *</label>
+                                <select name="rating" class="form-select" required>
+                                    <option value="">Выберите оценку...</option>
+                                    <option value="1">1 - Очень плохо</option>
+                                    <option value="2">2</option>
+                                    <option value="3">3 - Средне</option>
+                                    <option value="4">4</option>
+                                    <option value="5">5 - Отлично</option>
+                                </select>
+                            </div>
+
+                            <div class="d-flex justify-content-between pt-2 border-top">
+                                <a href="{{ url_for('view_project', project_id=project_id) }}" class="btn btn-secondary">← Отмена</a>
+                                <button type="submit" class="btn btn-success px-4">Завершить мероприятие</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

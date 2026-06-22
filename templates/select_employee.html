@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Выбор сотрудника</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+    <nav class="navbar navbar-dark bg-dark mb-4">
+        <div class="container-fluid">
+            <a href="{{ url_for('view_company', company_id=company_id) }}" class="btn btn-outline-light btn-sm">← Назад к компании</a>
+        </div>
+    </nav>
+    <div class="container">
+        <div class="row g-4">
+            <!-- Блок 1: Выбор из существующих -->
+            <div class="col-md-7">
+                <div class="card shadow">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0">Выберите существующее физическое лицо</h5>
+                    </div>
+                    <div class="card-body p-0">
+                        {% if clients %}
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light"><tr><th>ФИО</th><th>Должность</th><th style="width:120px">Действие</th></tr></thead>
+                            <tbody>
+                                {% for cl in clients %}
+                                <tr>
+                                    <td>{{ cl[1] }} {{ cl[2] }} {{ cl[3] or '' }}</td>
+                                    <td>{{ cl[4] or '-' }}</td>
+                                    <td>
+                                        <form method="POST" action="{{ url_for('link_employee', company_id=company_id) }}" class="d-inline">
+                                            <input type="hidden" name="client_id" value="{{ cl[0] }}">
+                                            <button type="submit" class="btn btn-sm btn-outline-primary">Добавить</button>
+                                        </form>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                        {% else %}
+                        <div class="text-center p-5 text-muted">В системе пока нет физических лиц.</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Блок 2: Создание нового сотрудника "на лету" -->
+            <div class="col-md-5">
+                <div class="card shadow border-primary">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0"><i class="bi bi-person-plus me-2"></i>Создать нового и добавить</h5>
+                    </div>
+                    <div class="card-body">
+                        <form method="POST" action="{{ url_for('add_client_physical') }}">
+                            <input type="hidden" name="company_id" value="{{ company_id }}">
+                            <div class="row g-2 mb-3">
+                                <div class="col-6">
+                                    <label class="form-label small fw-bold">Фамилия *</label>
+                                    <input type="text" name="last_name" class="form-control" required>
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label small fw-bold">Имя *</label>
+                                    <input type="text" name="first_name" class="form-control" required>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold">Должность *</label>
+                                <input type="text" name="position" class="form-control" required placeholder="Менеджер">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold">Телефон *</label>
+                                <input type="tel" name="phone" class="form-control" required>
+                            </div>
+                            <button type="submit" class="btn btn-primary w-100">Создать и добавить в компанию</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

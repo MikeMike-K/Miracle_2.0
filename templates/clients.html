@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Клиенты</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --corp-dark-blue: #0F172A;
+            --corp-mid-blue: #1E3A8A;
+            --corp-light-blue: #38BDF8;
+            --corp-orange: #F97316;
+            --corp-yellow: #FBBF24;
+            --corp-bg-light: #F0F9FF;
+        }
+        body {
+            background-color: var(--corp-bg-light);
+            font-family: 'Inter', sans-serif;
+        }
+        /* Навигационная панель */
+        .navbar-dark.bg-dark {
+            background: linear-gradient(90deg, var(--corp-dark-blue), var(--corp-mid-blue)) !important;
+            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.1);
+        }
+        /* Карточки */
+        .card {
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .card:hover {
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+        /* Заголовки карточек */
+        .card-header.bg-primary { background-color: var(--corp-mid-blue) !important; }
+        .card-header.bg-success { background-color: #10B981 !important; } /* Изумрудный для успеха */
+        .card-header.bg-warning { background-color: var(--corp-yellow) !important; color: var(--corp-dark-blue) !important; }
+        .card-header.bg-info { background-color: var(--corp-light-blue) !important; color: var(--corp-dark-blue) !important; }
+
+        /* Кнопки */
+        .btn-primary {
+            background-color: var(--corp-mid-blue);
+            border-color: var(--corp-mid-blue);
+        }
+        .btn-primary:hover {
+            background-color: var(--corp-dark-blue);
+            border-color: var(--corp-dark-blue);
+        }
+        .btn-success {
+            background-color: var(--corp-orange);
+            border-color: var(--corp-orange);
+            color: white;
+        }
+        .btn-success:hover {
+            background-color: #ea580c;
+            border-color: #ea580c;
+            color: white;
+        }
+        .btn-warning {
+            background-color: var(--corp-yellow);
+            border-color: var(--corp-yellow);
+            color: var(--corp-dark-blue);
+            font-weight: 600;
+        }
+        /* Таблицы */
+        .table-hover tbody tr:hover {
+            background-color: rgba(56, 189, 248, 0.1); /* Легкий голубой при наведении */
+        }
+        /* Вкладки (Tabs) */
+        .nav-tabs .nav-link.active {
+            color: var(--corp-mid-blue);
+            border-top: 3px solid var(--corp-orange);
+            font-weight: 600;
+        }
+        .nav-tabs .nav-link {
+            color: #64748B;
+        }
+        .nav-tabs .nav-link:hover {
+            color: var(--corp-mid-blue);
+            border-color: transparent;
+        }
+    </style>
+</head>
+<body class="bg-light">
+    <nav class="navbar navbar-dark bg-dark mb-4">
+        <div class="container"><a href="{{ url_for('main') }}" class="btn btn-outline-light btn-sm">← На главную</a></div>
+    </nav>
+    <div class="container mt-5 text-center">
+        <h2 class="mb-5">Выберите категорию клиентов</h2>
+        <div class="row justify-content-center g-4">
+            <div class="col-md-4">
+                <div class="card h-100 shadow-sm border-primary">
+                    <div class="card-body d-flex flex-column justify-content-center">
+                        <h4 class="card-title text-primary">Физические лица</h4>
+                        <a href="{{ url_for('clients_physical') }}" class="btn btn-primary mt-3">Открыть</a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card h-100 shadow-sm border-success">
+                    <div class="card-body d-flex flex-column justify-content-center">
+                        <h4 class="card-title text-success">Компании</h4>
+                        <a href="{{ url_for('clients_companies') }}" class="btn btn-success mt-3">Открыть</a>
+                    </div>
+                </div>
+            </div>
+            <!-- Замените блок с кнопкой Проекты на этот -->
+            <div class="col-md-4">
+                <div class="card h-100 shadow-sm border-warning">
+                    <div class="card-body d-flex flex-column justify-content-center">
+                        <h4 class="card-title text-warning">Проекты</h4>
+                        <a href="{{ url_for('clients_projects') }}" class="btn btn-warning mt-3 text-dark">Открыть</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

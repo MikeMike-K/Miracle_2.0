@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Главная | Miracle_2.0</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --corp-dark-blue: #0F172A;
+            --corp-mid-blue: #1E3A8A;
+            --corp-light-blue: #38BDF8;
+            --corp-orange: #F97316;
+            --corp-yellow: #FBBF24;
+            --corp-bg-light: #F0F9FF;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--corp-bg-light);
+            background-image: radial-gradient(circle at 10% 20%, rgba(56, 189, 248, 0.1) 0%, transparent 20%),
+                              radial-gradient(circle at 90% 80%, rgba(249, 115, 22, 0.08) 0%, transparent 20%);
+            min-height: 100vh;
+        }
+
+        /* Навигация */
+        .navbar-custom {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(15, 23, 42, 0.05);
+        }
+
+        /* Секция логотипа */
+        .hero-section {
+            text-align: center;
+            padding: 2rem 0 1.5rem;
+        }
+        .logo-container {
+            display: inline-flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 1rem;
+        }
+        .logo-svg {
+            width: 110px;
+            height: 110px;
+            filter: drop-shadow(0 8px 12px rgba(15, 23, 42, 0.1));
+            animation: float 6s ease-in-out infinite;
+        }
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-6px); }
+        }
+        .brand-name {
+            font-size: 3.2rem;
+            font-weight: 800;
+            color: var(--corp-dark-blue);
+            letter-spacing: -1.5px;
+            line-height: 1;
+        }
+        .brand-version {
+            font-size: 1.6rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--corp-orange), var(--corp-yellow));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            vertical-align: super;
+        }
+        .welcome-text {
+            color: #64748B;
+            font-size: 1.15rem;
+            font-weight: 500;
+            margin-bottom: 2.5rem;
+        }
+
+        /* Карточки-кнопки */
+        .action-card {
+            background: white;
+            border: 1px solid rgba(15, 23, 42, 0.05);
+            border-radius: 20px;
+            padding: 2.5rem 2rem;
+            text-align: center;
+            text-decoration: none;
+            color: var(--corp-dark-blue);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+        .action-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(90deg, var(--corp-light-blue), var(--corp-mid-blue));
+            transform: scaleX(0);
+            transition: transform 0.3s ease;
+        }
+        .action-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            border-color: rgba(56, 189, 248, 0.3);
+        }
+        .action-card:hover::before {
+            transform: scaleX(1);
+        }
+        .action-card.admin-card::before {
+            background: linear-gradient(90deg, var(--corp-orange), var(--corp-yellow));
+        }
+        .action-card.admin-card:hover {
+            border-color: rgba(249, 115, 22, 0.3);
+        }
+
+        .card-icon {
+            font-size: 3.5rem;
+            margin-bottom: 1.5rem;
+            background: linear-gradient(135deg, var(--corp-mid-blue), var(--corp-light-blue));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .admin-card .card-icon {
+            background: linear-gradient(135deg, var(--corp-orange), #ea580c);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .card-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+        .card-desc {
+            color: #64748B;
+            font-size: 0.95rem;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Верхняя навигация -->
+    <nav class="navbar navbar-custom sticky-top">
+        <div class="container">
+            <span class="navbar-brand mb-0 h1 fw-bold" style="color: var(--corp-dark-blue);">
+                <i class="bi bi-grid-1x2-fill me-2" style="color: var(--corp-orange);"></i>Панель управления
+            </span>
+            <div class="d-flex align-items-center gap-3">
+                <span class="text-muted small d-none d-md-block">
+                    <i class="bi bi-person-circle me-1"></i> {{ session.username }} ({{ session.role }})
+                </span>
+                <a href="{{ url_for('logout') }}" class="btn btn-outline-danger btn-sm rounded-pill px-3">
+                    <i class="bi bi-box-arrow-right me-1"></i> Выйти
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Основной контент -->
+    <div class="container">
+        <!-- Секция Логотипа и Приветствия -->
+        <div class="hero-section">
+            <div class="logo-container">
+                <!-- ПОЛНОСТЬЮ НОВЫЙ БЛОЧНЫЙ ЛОГОТИП -->
+                <svg class="logo-svg" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                        <!-- Градиент от оранжевого к желтому для стрелки -->
+                        <linearGradient id="arrowGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                            <stop offset="0%" stop-color="#F97316" />
+                            <stop offset="100%" stop-color="#FBBF24" />
+                        </linearGradient>
+                    </defs>
+
+                    <!-- Тонкая фоновая орбита, связывающая блоки в единый круг -->
+                    <circle cx="50" cy="50" r="36" stroke="#0F172A" stroke-width="1.5" opacity="0.08" stroke-dasharray="3 3" />
+
+                    <!-- Блок 1: Верх (12 часов) - Голубой -->
+                    <rect x="42" y="10" width="16" height="8" rx="4" fill="#38BDF8" transform="rotate(0 50 50)" />
+
+                    <!-- Блок 2: Верх-лево (10 часов) - Средне-синий -->
+                    <rect x="24" y="24" width="16" height="8" rx="4" fill="#1E3A8A" transform="rotate(-45 50 50)" />
+
+                    <!-- Блок 3: Лево (8 часов) - Темно-синий -->
+                    <rect x="10" y="42" width="16" height="8" rx="4" fill="#0F172A" transform="rotate(-90 50 50)" />
+
+                    <!-- Блок 4: Низ-лево (7 часов) - Средне-синий -->
+                    <rect x="24" y="60" width="16" height="8" rx="4" fill="#1E3A8A" transform="rotate(-135 50 50)" />
+
+                    <!-- Блок 5: Низ (6 часов) - Стрелка вправо (Оранжево-желтый градиент) -->
+                    <!-- Форма: скругленный слева прямоугольник, плавно переходящий в наконечник стрелки вправо -->
+                    <path d="M 30 81
+                             L 50 81
+                             L 50 75
+                             L 66 85
+                             L 50 95
+                             L 50 89
+                             L 30 89
+                             A 8 8 0 0 1 30 81 Z"
+                          fill="url(#arrowGrad)"
+                          filter="drop-shadow(0 3px 6px rgba(249, 115, 22, 0.4))" />
+
+                    <!-- Центральный технологичный акцент (для баланса композиции) -->
+                    <circle cx="50" cy="50" r="5" fill="#38BDF8" opacity="0.8" />
+                </svg>
+
+                <div class="brand-name">Miracle<span class="brand-version">_2.0</span></div>
+            </div>
+            <p class="welcome-text">
+                Добро пожаловать, <strong>{{ session.get('first_name', session.username) }} {{ session.get('patronymic', '') }}</strong>!
+                <br>Выберите раздел для начала работы.
+            </p>
+        </div>
+
+        <!-- Сетка кнопок -->
+        <div class="row justify-content-center g-4 pb-5">
+            <!-- Кнопка Клиенты -->
+            <div class="col-md-5 col-lg-4">
+                <a href="{{ url_for('clients') }}" class="action-card">
+                    <i class="bi bi-people-fill card-icon"></i>
+                    <div class="card-title">Клиенты</div>
+                    <div class="card-desc">Управление физическими лицами, компаниями и проектами</div>
+                </a>
+            </div>
+
+            <!-- Кнопка Админ панель (только для админов) -->
+            {% if session.role in ['admin', 'local_admin'] %}
+            <div class="col-md-5 col-lg-4">
+                <a href="{{ url_for('admin') }}" class="action-card admin-card">
+                    <i class="bi bi-shield-lock-fill card-icon"></i>
+                    <div class="card-title">Админ панель</div>
+                    <div class="card-desc">Управление пользователями, ролями и настройками системы</div>
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

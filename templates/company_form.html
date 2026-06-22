@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Карточка компании</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <style>.emp-clickable-row { cursor: pointer; transition: background 0.2s; } .emp-clickable-row:hover { background-color: #e7f1ff; }</style>
+</head>
+<body class="bg-light">
+    <nav class="navbar navbar-dark bg-dark mb-4">
+        <div class="container-fluid">
+            {% if request.args.get('return_to') %}
+                <!-- Если мы пришли из проекта, показываем кнопку возврата в проект -->
+                <a href="{{ request.args.get('return_to') }}" class="btn btn-outline-light btn-sm">
+                    <i class="bi bi-arrow-left me-1"></i> Вернуться в проект
+                </a>
+            {% else %}
+                <!-- Иначе показываем стандартную кнопку -->
+                <a href="{{ url_for('clients_companies') }}" class="btn btn-outline-light btn-sm">
+                    <i class="bi bi-arrow-left me-1"></i> К списку компаний
+                </a>
+            {% endif %}
+        </div>
+    </nav>
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-10">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h3>Карточка компании: <span class="text-primary">{{ company[1] if company else 'Новая' }}</span></h3>
+                    {% if company and not is_editing %}
+                        <a href="{{ url_for('edit_company', company_id=company[0]) }}" class="btn btn-primary">✎ Редактировать данные</a>
+                    {% endif %}
+                </div>
+
+                <ul class="nav nav-tabs mb-3" id="companyTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="data-tab" data-bs-toggle="tab" data-bs-target="#tab-data" type="button">Данные компании</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="projects-tab" data-bs-toggle="tab" data-bs-target="#tab-projects" type="button">Участие в проектах</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="events-tab" data-bs-toggle="tab" data-bs-target="#tab-events" type="button">Мероприятия</button>
+                    </li>
+                </ul>
+
+                <div class="tab-content" id="companyTabsContent">
+
+                    <!-- ВКЛАДКА 1: ДАННЫЕ КОМПАНИИ (ВСЕ ПОЛЯ ДОСТУПНЫ ДЛЯ РЕДАКТИРОВАНИЯ) -->
+                    <div class="tab-pane fade show active" id="tab-data" role="tabpanel">
+                        <div class="card shadow mb-4">
+                            <div class="card-body">
+                                <form method="POST" action="{{ url_for('edit_company', company_id=company[0]) if company and is_editing else url_for('add_company') }}">
+                                        <!-- ДОБАВИТЬ ЭТУ СТРОКУ ПРЯМО ПОСЛЕ ОТКРЫТИЯ ТЕГА FORM -->
+                                    {% if project_id %}
+                                        <input type="hidden" name="project_id" value="{{ project_id }}">
+                                    {% endif %}
+
+                                    <div class="row mb-3">
+                                        <div class="col-md-6">
+                                            <label class="form-label">Наименование *</label>
+                                            {% if company and not is_editing %}
+                                                <input type="text" class="form-control" value="{{ company[1] }}" readonly>
+                                            {% else %}
+                                                <input type="text" name="name" class="form-control" value="{{ company[1] if company else '' }}" required>
+                                            {% endif %}
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">Страна</label>
+                                            {% if company and not is_editing %}
+                                                <input type="text" class="form-control" value="{{ company[2] }}" readonly>
+                                            {% else %}
+                                                <select name="country" class="form-select">
+                                                    <option value="">Выберите страну...</option>
+                                                    {% for c in ['Россия', 'Казахстан', 'Беларусь', 'Китай', 'США', 'Германия', 'Другая'] %}
+                                                        <option value="{{ c }}" {% if company and company[2]==c %}selected{% endif %}>{{ c }}</option>
+                                                    {% endfor %}
+                                                </select>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="row mb-3">
+                                        <div class="col-md-6">
+                                            <label class="form-label">Вид деятельности</label>
+                                            {% if company and not is_editing %}
+                                                <input type="text" class="form-control" value="{{ company[3] }}" readonly>
+                                            {% else %}
+                                                <select name="activity" class="form-select">
+                                                    <option value="">Выберите...</option>
+                                                    {% for act in ['Airport', 'Car & Machinery industry', 'Chemical & materials production', 'Construction', 'Design & engineering', 'Developer & Operator', 'Food industry - meat, milk, etc.', 'Gas & Oil industry', 'High class shopping malls', 'Hospitals and clinics', 'Hotel building 4-5*', 'Hygienic products - diapers, etc.', 'IT & electronic production', 'Mining & Metallurgical industry', 'Office building class A', 'Pharmaceutical industry'] %}
+                                                        <option value="{{ act }}" {% if company and company[3]==act %}selected{% endif %}>{{ act }}</option>
+                                                    {% endfor %}
+                                                </select>
+                                            {% endif %}
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">Тип</label>
+                                            {% if company and not is_editing %}
+                                                <input type="text" class="form-control" value="{{ company[4] }}" readonly>
+                                            {% else %}
+                                                <select name="type" class="form-select">
+                                                    {% for t in ['КЛИЕНТ', 'КОНКУРЕНТ', 'ПАРТНЕР', 'ПОСТАВЩИК', 'ПРОЕКТИРОВЩИК'] %}
+                                                        <option value="{{ t }}" {% if company and company[4]==t %}selected{% endif %}>{{ t }}</option>
+                                                    {% endfor %}
+                                                </select>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="row mb-3">
+                                        <div class="col-md-12">
+                                            <label class="form-label">Web-Сайт</label>
+                                            {% if company and not is_editing %}
+                                                <input type="text" class="form-control" value="{{ company[5] }}" readonly>
+                                            {% else %}
+                                                <input type="url" name="website" class="form-control" value="{{ company[5] if company else '' }}">
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Описание</label>
+                                        {% if company and not is_editing %}
+                                            <textarea class="form-control" rows="3" readonly>{{ company[6] if company else '' }}</textarea>
+                                        {% else %}
+                                            <textarea name="description" class="form-control" rows="3">{{ company[6] if company else '' }}</textarea>
+                                        {% endif %}
+                                    </div>
+
+                                    {% if not company %}
+                                        <button type="submit" class="btn btn-success">Создать компанию</button>
+                                    {% elif is_editing %}
+                                        <a href="{{ url_for('view_company', company_id=company[0]) }}" class="btn btn-secondary">Отмена</a>
+                                        <button type="submit" class="btn btn-success">Сохранить изменения</button>
+                                    {% endif %}
+                                </form>
+                            </div>
+                        </div>
+
+                        {% if company and not is_editing %}
+                        <div class="card shadow">
+                            <div class="card-header bg-secondary text-white d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0">Сотрудники компании</h5>
+                                <!-- ДВЕ КНОПКИ РЯДОМ -->
+                                <div class="d-flex gap-2">
+                                    <a href="{{ url_for('select_employee', company_id=company[0]) }}" class="btn btn-primary btn-sm">
+                                        <i class="bi bi-search me-1"></i> Добавить из списка
+                                    </a>
+                                    <a href="{{ url_for('add_client_physical', company_id=company[0]) }}" class="btn btn-success btn-sm">
+                                        <i class="bi bi-person-plus me-1"></i> Создать сотрудника
+                                    </a>
+                                </div>
+                            </div>
+                            <div class="card-body p-0">
+                                {% if employees %}
+                                <table class="table table-sm table-hover mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th style="width:50px">№</th>
+                                            <th>Фамилия И.О.</th>
+                                            <th>Должность</th>
+                                            <th style="width:100px" class="text-center">Действия</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for emp in employees %}
+                                        <tr class="emp-clickable-row" ondblclick="window.location.href='{{ url_for('view_client_physical', client_id=emp[0], return_to=request.path) }}'">
+                                            <td>{{ emp[0] }}</td>
+                                            <td>{{ emp[1] }} {{ emp[2][0] if emp[2] else '' }}. {{ emp[3][0] if emp[3] else '' }}.</td>
+                                            <td>{{ emp[4] or '-' }}</td>
+                                            <td class="text-center">
+                                                <form method="POST" action="{{ url_for('unlink_employee', company_id=company[0], client_id=emp[0]) }}" class="d-inline" onsubmit="return confirm('Удалить сотрудника из компании?');">
+                                                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Удалить">✕</button>
+                                                </form>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                                {% else %}
+                                <div class="text-center p-3 text-muted">Нет привязанных сотрудников</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- ВКЛАДКА 2: УЧАСТИЕ В ПРОЕКТАХ -->
+                    <div class="tab-pane fade" id="tab-projects" role="tabpanel">
+                        {% if company %}
+                        <div class="card shadow">
+                            <div class="card-header bg-info text-white"><h5 class="mb-0">Проекты с участием компании</h5></div>
+                            <div class="card-body p-0">
+                                {% if projects %}
+                                <style>.proj-clickable-row { cursor: pointer; transition: background 0.2s; } .proj-clickable-row:hover { background-color: #e7f1ff; }</style>
+                                <table class="table table-hover mb-0">
+                                    <thead class="table-light"><tr><th style="width:50px">№</th><th>Наименование проекта</th><th>Статус</th><th>Адрес</th></tr></thead>
+                                    <tbody>
+                                        {% for p in projects %}
+                                        <tr class="proj-clickable-row" ondblclick="window.location.href='{{ url_for('view_project', project_id=p[0]) }}'">
+                                            <td>{{ p[0] }}</td>
+                                            <td class="fw-bold">{{ p[1] }}</td>
+                                            <td><span class="badge bg-secondary">{{ p[2] }}</span></td>
+                                            <td>{{ p[3] or '-' }}</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                                {% else %}
+                                <div class="text-center p-4 text-muted">Компания пока не участвует ни в одном проекте.</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- ВКЛАДКА 3: МЕРОПРИЯТИЯ -->
+                    <div class="tab-pane fade" id="tab-events" role="tabpanel">
+                        {% if company %}
+                        <div class="d-flex justify-content-end mb-3">
+                            <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addEventModal">+ Создать мероприятие</button>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="card shadow h-100">
+                                    <div class="card-header bg-warning text-dark"><h5 class="mb-0">Запланированные</h5></div>
+                                    <div class="card-body p-0">
+                                        {% if planned_events %}
+                                            <ul class="list-group list-group-flush">
+                                                {% for ev in planned_events %}
+                                                <li class="list-group-item">
+                                                    <div class="mb-2">
+                                                        <span class="badge bg-primary">{{ ev[1] }}</span>
+                                                        <small class="text-muted d-block">{{ ev[2] }} – {{ ev[3] }}</small>
+                                                        <small class="text-muted">Отв: {{ ev[4] }}</small>
+                                                        <p class="mb-0 small mt-1">{{ ev[5] }}</p>
+                                                    </div>
+                                                    <div class="d-flex gap-2 mt-2">
+                                                        <a href="{{ url_for('edit_event', company_id=company[0], event_id=ev[0]) }}" class="btn btn-sm btn-outline-success flex-fill">✓ Выполнить</a>
+                                                        <a href="{{ url_for('cancel_event', company_id=company[0], event_id=ev[0]) }}" class="btn btn-sm btn-outline-danger flex-fill" onclick="return confirm('Отменить мероприятие?')">✕ Отменить</a>
+                                                    </div>
+                                                </li>
+                                                {% endfor %}
+                                            </ul>
+                                        {% else %}
+                                            <div class="p-3 text-center text-muted">Нет задач</div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card shadow h-100">
+                                    <div class="card-header bg-success text-white"><h5 class="mb-0">Выполненные</h5></div>
+                                    <div class="card-body p-0">
+                                        {% if completed_events %}
+                                            <ul class="list-group list-group-flush">
+                                                {% for ev in completed_events %}
+                                                <li class="list-group-item bg-light emp-clickable-row" ondblclick="window.location.href='{{ url_for('view_event', company_id=company[0], event_id=ev[0]) }}'">
+                                                    <div class="d-flex justify-content-between">
+                                                        <div class="w-100">
+                                                            <span class="badge bg-secondary">{{ ev[1] }}</span>
+                                                            <small class="text-muted d-block text-decoration-line-through">{{ ev[2] }}</small>
+                                                            <div class="mt-1 p-1 bg-white border rounded small"><strong>Итог:</strong> {{ ev[7] or '-' }} ({{ ev[9] }}/5 ⭐)</div>
+                                                        </div>
+                                                        <a href="{{ url_for('view_event', company_id=company[0], event_id=ev[0]) }}" class="btn btn-sm btn-outline-primary ms-2" title="Просмотр">👁</a>
+                                                    </div>
+                                                </li>
+                                                {% endfor %}
+                                            </ul>
+                                        {% else %}
+                                            <div class="p-3 text-center text-muted">Нет выполненных</div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card shadow h-100">
+                                    <div class="card-header bg-danger text-white"><h5 class="mb-0">Отмененные</h5></div>
+                                    <div class="card-body p-0">
+                                        {% if cancelled_events %}
+                                            <ul class="list-group list-group-flush">
+                                                {% for ev in cancelled_events %}
+                                                <li class="list-group-item bg-light opacity-75">
+                                                    <div><span class="badge bg-dark">{{ ev[1] }}</span><small class="text-muted d-block text-decoration-line-through">{{ ev[2] }}</small><small class="text-danger">Отменено</small></div>
+                                                </li>
+                                                {% endfor %}
+                                            </ul>
+                                        {% else %}
+                                            <div class="p-3 text-center text-muted">Нет отмененных</div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- МОДАЛЬНОЕ ОКНО: Создание мероприятия для Компании -->
+    {% if company %}
+    <div class="modal fade" id="addEventModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <form method="POST" action="{{ url_for('add_event', company_id=company[0]) }}">
+                    <div class="modal-header bg-success text-white">
+                        <h5 class="modal-title">Создать мероприятие для компании</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">Вид мероприятия *</label>
+                            <select name="event_type" class="form-select" required>
+                                <option value="">Выберите тип...</option>
+                                <option value="М2. Звонок/Письмо">М2. Звонок/Письмо</option>
+                                <option value="М3. Встреча с клиентом">М3. Встреча с клиентом</option>
+                                <option value="М4. Встреча с партнером">М4. Встреча с партнером</option>
+                                <option value="М5. Получение запроса КП">М5. Получение запроса КП</option>
+                                <option value="М6. Изменение запроса КП">М6. Изменение запроса КП</option>
+                                <option value="М7. Отправка КП">М7. Отправка КП</option>
+                                <option value="М7.1. Повторная отправка КП">М7.1. Повторная отправка КП</option>
+                                <option value="М8. Получение заказа">М8. Получение заказа</option>
+                                <option value="М9. Проигрыш">М9. Проигрыш</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Запланировано на *</label>
+                            <input type="date" name="planned_date" class="form-control" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Ответственный *</label>
+                            {% if session['role'] == 'manager' %}
+                                <input type="text" class="form-control" value="{{ session['username'] }}" readonly>
+                                <input type="hidden" name="responsible_user" value="{{ session['username'] }}">
+                            {% else %}
+                                <input type="text" name="responsible_user" class="form-control" value="{{ session['username'] }}" required>
+                            {% endif %}
+                        </div>
+                        <div class="mb-3"><label class="form-label">Описание задачи</label><textarea name="description" class="form-control" rows="3"></textarea></div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                        <button type="submit" class="btn btn-success">Создать мероприятие</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</body>
+</html>
